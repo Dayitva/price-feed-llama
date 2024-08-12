@@ -17,7 +17,7 @@
 local json = require('json')
 
 -- Configure this to the process ID of the world you want to send chat messages to
-CHAT_TARGET = 'YOU_WORLD_ID'
+CHAT_TARGET = 'D-gNmZWSLE-pxxDTSNme5tGpS2NjANPqdLCrBjOAfPk'
 
 _0RBIT = "BaMK1dfayo75s3q1ow6AO64UDpD9SEFbeE8xYrY2fyQ"
 _0RBT_TOKEN_PROCESS = "BUhZLMwQ6yZHguLtJYA5lLUa9LQzLXMXRfaq9FVcPJc"
@@ -45,9 +45,9 @@ function(msg)
 			Type = 'Schema'
 		},
 		Data = json.encode({
-			GetRealData = {
-				Title = "What data would you like to see?",
-				Description = "Connect with 0rbit community at \n Discord: https://discord.com/invite/JVSjqaKJgV \nTwitter (X): https://x.com/0rbitco \n      Docs: https://docs.0rbit.co/",
+			PriceFeedLlama = {
+				Title = "What price feed would you like to fetch?",
+				Description = "Please enter the ticker of the token you would like to see the price of.",
 				Schema = {
 					Tags = {
 						type = "object",
@@ -66,10 +66,10 @@ function(msg)
               },
               ["X-Response"] = {
 								type = "string",
-								title = "Enter API URL:",
-								minLength = 5,
-								maxLength = 250,
-                default= "https://dummyjson.com/recipes/1",
+								title = "Enter the ticker:",
+								minLength = 1,
+								maxLength = 10,
+                default= "AR",
 							}
 						}
 					}
@@ -84,12 +84,12 @@ Handlers.add('SendReq',
     function(msg)
       print("SAYING Send")
       print("in send req".. tostring(change)) 
-      local url = msg.Tags["X-Response"] 
-      local prefix = "https://dummyjson.com/recipes/"
-      if(string.sub(url, 1, #prefix) ~= prefix) then 
-        change = true
-        print("in if cond".. tostring(change))
-      end
+      local token = msg.Tags["X-Response"] 
+      local url = string.format("https://api.coinbase.com/v2/prices/%s-USD/spot", token)
+      -- if(string.sub(url, 1, #prefix) ~= prefix) then 
+      --   change = true
+      --   print("in if cond".. tostring(change))
+      -- end
       print(msg.Tags.Quantity)
       Send({
               Target = _0RBT_TOKEN_PROCESS,
@@ -106,28 +106,15 @@ Handlers.add('SendReq',
 Handlers.add(
     "Receive-Data",
     Handlers.utils.hasMatchingTag("Action", "Receive-Response"),
+
     function(msg)
         print("in recieve".. tostring(change))
         local res = json.decode(msg.Data)
+        print(res)
         -- USE constrained string to display some of the data raw, long strings are skipped and not displayed
-        local constrainedString = string.sub(json.encode(res), 1, 150)
-        -- Edit and Format res or Constrained String to display Data Recieved Properly
-        -- BELOW IS THE FORMATTING FOR https://dummyjson.com/recipes/1 
-        -- PLEASE CHANGE FORMATTING TO SUIT RESPECTIVE URL
-        local difficultyLevel =""
-        local nameOf =""
-        local cookTime =""
-        if change == false then
-        -- Traverses through decoded json to find key value pairs and assign to local variable for better display
-        for k, v in pairs(res) do
-          if k == "name" then
-            nameOf = v
-          elseif k == "difficulty" then
-            difficultyLevel = v
-          elseif k == "cookTimeMinutes" then
-            cookTime = v
-          end
-        end
+        local price = string.format("%." .. (3) .. "f", res["data"]["amount"])
+        local token = res["data"]["base"]
+        print(price)
         print(Colors.green .. "You have received the data from the 0rbit process.")
         -- Write in Chat
         Send({
@@ -136,20 +123,9 @@ Handlers.add(
             Action = 'ChatMessage',
             ['Author-Name'] = '0rbit Llama',
           },
-          Data = "Recipe is " .. nameOf .. " with a difficulty level of " .. difficultyLevel .. " and cook time of " .. cookTime .." minutes. Have Fun!",
+          Data = "Current price of " .. token .. " is $" .. price,
         })
-        print("Recipe is " .. nameOf .. " with a difficulty level of " .. difficultyLevel .. " and cook time of " .. cookTime .." minutes. Have Fun!")
-      -- PROCESS A GENERAL URL WITHOUT FORMATTING
-      else
-        Send({
-          Target = CHAT_TARGET,
-          Tags = {
-            Action = 'ChatMessage',
-            ['Author-Name'] = '0rbit Llama',
-          },
-          Data = "Data is: " .. constrainedString .. "..." ,
-        })
-        print(constrainedString)
-      end
+        print("Current price of " .. token .. " is $" .. price)
+      
     end
 )
